@@ -1,0 +1,29 @@
+ray通过remote向head注册并调度线程，ray可以管理全部节点的资源并限制每个进程需要的资源。
+MPI(Multi Process Interface)通过mpirun来将一个程序或者脚本执行给定的次数，相较于ray，其每次只能执行相同的程序 \
+但在同一个程序中，可以通过MPI库的rank标记是第几个进程，进而通过MPI进程间通信的方式首发数据，进行并行计算。
+OMP(Open Multiprocessing)其是对一段代码执行多线程，通过宏控制，其并不能执行进程级别的并行运行，且只有支持OMP的编译器才能对可以优化的代码部分实现并行计算。
+
+hydra本身可以执行扫面作业，但其本身是线性的，其本质是将参数分解成多个cfg对象（或yaml）文件进行，对于其中每一个来说，都是一个单独的作业。
+ray可以将多个单独的作业注册给head，因此其可以将hydra分解之后的子任务一个一个注册。
+对于ray来说，由于每个cfg都是单独的，因此一个作业或者扫面作业在他看来都是一样的。
+hydra在程序入口处就已经实现了对任务的分解，因此编写一个作业的hydra代码与一个扫面作业的hydra代码也几乎没什么区别。
+
+slurm中的ntasks以及task_per_node等参数只在使用srun和mpirun的时候生效，其自动根据ntasks实现对一个程序的多次运行。
+这个ntasks并不强迫你到底可以执行多少个进程，cpu申请数量也不真的限制你能访问的cpu数量，cpu数量只是服务器对能给你申请资源的一个保证。
+可以访问获得节点的全部cpu，但是gpu的数量确实是申请的gpu数量。
+srun的时候可以重新指定其要运行的代码的ntasks task_per_node nodes nodelist等参数，进而精准控制该代码运行在哪个或哪几个节点上，分别运行多少次 \
+例如在注册ray的head以及worker节点的时候就是这样做的。
+
+hydra-ray-launcher库在执行程序的参数列表以及yaml文件中已经给定了初始化参数，代码中无需也不应该再使用ray.init注册。
+ray在注册head以及worker节点的时候可以额外给定resources参数，这个参数并不是真的CPU、GPU资源，只是一种对该节点拥有资源的一种标识， \
+在代码中ray.remote.option的时候可以通过resources来匹配该进程可以运行在哪些节点上，更像对节点资源的标签和分组。
+
+yaml文件中defaults hydra的参数在扫面作业的时候将被精简（代码中不可见），sweeper的
+  sweeper:
+    params:
+      model.lr: 0.001,0.002,0.003,0.004
+      model.hidden: 128,256,512,1024
+sweeper, params两层路径将被直接精简，可以直接在代码中访问cfg.model.lr
+
+由于hydra.ray被精简掉，在代码中无法赋值，因此直接通过在python exec.py的时候指定hydra.launcher.ray.init.address=${head_node}:${ray_port}，
+在hydra尚未精简yaml时替换address的值。

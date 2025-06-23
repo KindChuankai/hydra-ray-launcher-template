@@ -1,0 +1,22 @@
+defaults:
+  - override hydra/launcher: ray
+
+model:
+  lr: 0.001
+  hidden: 128
+
+hydra:
+  launcher:
+    ray:
+      init:
+        address: auto
+        object_store_memory: null
+
+  sweep:
+    dir: /users/${env:USER}/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}
+    subdir: lr=${model.lr}_hidden=${model.hidden}
+
+  sweeper:
+    params:
+      model.lr: 0.001,0.002,0.003,0.004
+      model.hidden: 128,256,512,1024
