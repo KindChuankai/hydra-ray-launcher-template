@@ -1,0 +1,14 @@
+Host aire
+    HostName aire.leeds.ac.uk
+    User srvz3018
+    ProxyJump gateway
+
+Host gateway
+    HostName rash.leeds.ac.uk
+    User srvz3018
+    port 22
+
+
+[srvz3018@login3[aire] sweep-work]$ conda list -n robodiff | grep hydra
+hydra-core                1.3.2              pyhd8ed1ab_1    conda-forge
+hydra-ray-launcher        1.2.1                    pypi_0    pypi
